@@ -4,9 +4,23 @@
 #include <mavros_msgs/State.h>
 
 #include <NewPing.h>
+#include <Adafruit_NeoPixel.h>
 
 #define MAX_DISTANCE 300 // Maximum distance we want to ping for (in centimeters). Maximum sensor distance is rated at 400-500cm.
 #define SONAR_NUM 2
+
+#define PIXEL_PIN 6
+#define PIXEL_COUNT 7 //or 87
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(PIXEL_COUNT, PIXEL_PIN, NEO_GRB + NEO_KHZ800);
+uint8_t   brightness;
+uint16_t  brg     = 200;
+uint32_t  RED     = strip.Color(brg,  0,  0);
+uint32_t  GREEN   = strip.Color(  0,brg,  0);
+uint32_t  BLUE    = strip.Color(  0,  0,brg);
+uint32_t  YELLOW  = strip.Color(brg,brg,  0);
+uint32_t  WHITE   = strip.Color(brg,brg,brg);
+uint32_t  BLACK   = strip.Color(  0,  0,  0);
 
 NewPing sonar[SONAR_NUM] = {   // Sensor object array.
   NewPing(2, 3, MAX_DISTANCE), // Each sensor'se trigger pin, echo pin, and max distance to ping. 
@@ -20,8 +34,10 @@ bool ascend = true;
 bool roverArmed = true;
 
 void stateCallback(const mavros_msgs::State& msg){
-  if(msg.armed)digitalWrite(13, HIGH);
-  else digitalWrite(13, LOW);
+  if(msg.armed){
+    digitalWrite(13, HIGH);
+    colorWipe(BLUE);
+  }
 }
 
 sensor_msgs::Range range_msg;
@@ -36,6 +52,8 @@ float getRange_Ultrasound(uint8_t index){
 
 void setup()
 {
+  initLED();
+  
   pinMode(13, OUTPUT);
   
   nh.initNode();
@@ -70,4 +88,31 @@ void loop()
   }
 
   nh.spinOnce();
+}
+
+void colorWipe(uint32_t color){
+  for(int i=0; i<strip.numPixels(); i++){
+    strip.setPixelColor(i, color);
+    strip.show();
+    delay(1);
+  }
+}
+
+void blinking(uint32_t color){
+  colorWipe(BLACK);
+  delay(100);
+  colorWipe(color);
+  delay(100);
+  colorWipe(BLACK);
+  delay(100);
+  colorWipe(color);
+  delay(100);
+  colorWipe(BLACK);
+}
+
+void initLED(){
+  strip.begin();
+  strip.show();
+  strip.setBrightness(50);
+  blinking(YELLOW);
 }
