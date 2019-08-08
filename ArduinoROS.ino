@@ -31,13 +31,10 @@ ros::NodeHandle  nh;
 
 int value = 0;
 bool ascend = true;
-bool roverArmed = true;
+bool roverArmed = false;
 
 void stateCallback(const mavros_msgs::State& msg){
-  if(msg.armed){
-    digitalWrite(13, HIGH);
-    colorWipe(BLUE);
-  }
+  roverArmed = msg.armed;
 }
 
 sensor_msgs::Range range_msg;
@@ -68,25 +65,30 @@ void setup()
   range_msg.max_range = 3.0;
 }
 
-
 long range_time = 0;
+long led_time = 0;
+bool led_on = true;
 
-void loop()
-{
-  if ( millis() >= range_time ){
-    int r =0;
-
-    range_msg.range = getRange_Ultrasound(0);
-    range_msg.header.stamp = nh.now();
-    pub_range1.publish(&range_msg);
-
-    range_msg.range = getRange_Ultrasound(1);
-    range_msg.header.stamp = nh.now();
-    pub_range2.publish(&range_msg);
-    
-    range_time =  millis() + 50;
-  }
-
+void loop(){
+  if(nh.connected()){
+    if ( millis() >= range_time ){
+      int r =0;
+  
+      range_msg.range = getRange_Ultrasound(0);
+      range_msg.header.stamp = nh.now();
+      pub_range1.publish(&range_msg);
+  
+      range_msg.range = getRange_Ultrasound(1);
+      range_msg.header.stamp = nh.now();
+      pub_range2.publish(&range_msg);
+      
+      range_time =  millis() + 50;
+      if(roverArmed){
+        colorWipe(BLUE);
+      } else blinking(YELLOW, 250);
+    }
+  } else colorWipe(RED);
+  
   nh.spinOnce();
 }
 
@@ -98,21 +100,26 @@ void colorWipe(uint32_t color){
   }
 }
 
-void blinking(uint32_t color){
-  colorWipe(BLACK);
-  delay(100);
-  colorWipe(color);
-  delay(100);
-  colorWipe(BLACK);
-  delay(100);
-  colorWipe(color);
-  delay(100);
-  colorWipe(BLACK);
+void blinking(uint32_t color, uint32_t wait){
+  if ( millis() >= led_time ){
+    if(led_on){
+      colorWipe(BLACK);
+      digitalWrite(13, LOW);
+      led_on = false;
+    }
+    else{
+      colorWipe(color);
+      digitalWrite(13, HIGH);
+      led_on = true;
+    }
+
+    led_time = millis + wait;
+  }
 }
 
 void initLED(){
   strip.begin();
   strip.show();
   strip.setBrightness(50);
-  blinking(YELLOW);
+  blinking(RED, 150);
 }
